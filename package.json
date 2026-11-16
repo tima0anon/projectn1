@@ -1,0 +1,9 @@
+{
+  "private": true,
+  "scripts": {
+    "test": "node tests/game.cjs"
+  },
+  "devDependencies": {
+    "jsdom": "26.0.0"
+  }
+}

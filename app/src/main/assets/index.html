@@ -1,0 +1,18 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:">
+<title>Офлайн-шахматы</title><link rel="stylesheet" href="style.css"></head><body>
+<main>
+<header><div><small>ИГРА БЕЗ ИНТЕРНЕТА</small><h1>Офлайн-шахматы</h1></div><button class="icon" id="archive" aria-label="Сохранённые партии">☰</button></header>
+<div class="opponent"><span class="avatar">♞</span><div><b>Stockfish 16.1</b><div id="level" class="muted"></div></div><span class="badge">ОФЛАЙН</span></div>
+<div id="board" role="grid" aria-label="Шахматная доска"></div>
+<div class="status"><span id="status"></span><button id="retry" hidden>Повторить</button></div>
+<div class="actions"><button id="undo">↶ Отменить</button><button id="save">Сохранить</button><button id="new" class="primary">Новая игра</button></div>
+<div id="history" class="moves"></div>
+<footer>Партия сохраняется автоматически</footer>
+</main>
+<dialog id="setup"><form method="dialog"><h2>Новая партия</h2><label>Сила соперника <b id="ratingText">≈ 1200 Elo</b></label><input id="rating" type="range" min="400" max="3000" step="100" value="1200"><div class="scale"><span>Новичок</span><span>Мастер</span></div><p class="hint">Рейтинг ориентировочный. Ниже 1320 Elo движок дополнительно допускает ошибки.</p><label for="color">Ваш цвет</label><select id="color"><option value="w">Белые</option><option value="b">Чёрные</option><option value="random">Случайный</option></select><div class="dialogActions"><button value="cancel">Назад</button><button id="start" type="button" class="primary">Начать</button></div></form></dialog>
+<dialog id="promotion"><h2>Превращение пешки</h2><div id="promotionChoices" class="dialogActions"></div></dialog>
+<dialog id="saved"><h2>Сохранённые партии</h2><div id="savedList"></div><div class="dialogActions"><button id="export">Экспорт текущей PGN</button><button onclick="document.getElementById('saved').close()">Закрыть</button></div></dialog>
+<div id="toast" role="status"></div>
+<script src="chess.js"></script><script src="app.js"></script>
+</body></html>

@@ -15,7 +15,7 @@ public class AppTest extends ActivityInstrumentationTestCase2<MainActivity> {
     private void until(String expression)throws Exception{
         long end=System.currentTimeMillis()+45000;
         while(System.currentTimeMillis()<end){if("true".equals(eval(expression)))return;Thread.sleep(150);}
-        fail("Timed out: "+expression+"; status="+eval("document.getElementById('status').textContent"));
+        fail("Timed out: "+expression+"; status="+eval("document.getElementById('status').textContent")+"; pointer="+eval("JSON.stringify({last:window.lastPointer,drag:drag&&drag.from,error:window.pointerError})"));
     }
     public void testOfflineEngineAndPersistence()throws Exception{
         getActivity();until("typeof restore==='function'");

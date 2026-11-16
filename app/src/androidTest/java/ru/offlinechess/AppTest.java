@@ -63,22 +63,32 @@ public class AppTest extends ActivityInstrumentationTestCase2<MainActivity> {
 
     public void testTouchDragMoves()throws Exception{
         getActivity();until("typeof restore==='function'");
-        eval("document.getElementById('setup').close();restore({moves:[],human:'w',elo:1500,mode:'game'});true");
+        eval("document.getElementById('setup').close();restore({moves:[],human:'w',elo:1500,mode:'game'});document.addEventListener('pointerdown',e=>window.lastPointer=[e.clientX,e.clientY],true);window.addEventListener('error',e=>window.pointerError=e.message);true");
         until("document.querySelector('#pieces [data-square=e2]').complete");
         JSONArray points=new JSONArray(eval("(()=>{const r=document.getElementById('board').getBoundingClientRect();return [r.left+r.width*4.5/8,r.top+r.height*6.5/8,r.left+r.width*4.5/8,r.top+r.height*4.5/8]})()"));
-        int[] location=new int[2];float[] scale=new float[1];int[] padding=new int[2];
+        int[] size=new int[2];
         getInstrumentation().runOnMainSync(()->{
-            getActivity().web.getLocationOnScreen(location);
-            scale[0]=getActivity().web.getScale();
-            padding[0]=getActivity().web.getPaddingLeft();padding[1]=getActivity().web.getPaddingTop();
+            getActivity().web.requestFocus();size[0]=getActivity().web.getWidth();size[1]=getActivity().web.getHeight();
         });
-        float fromX=padding[0]+(float)points.getDouble(0)*scale[0];
-        float fromY=padding[1]+(float)points.getDouble(1)*scale[0];
-        float toX=location[0]+padding[0]+(float)points.getDouble(2)*scale[0];
-        float toY=location[1]+padding[1]+(float)points.getDouble(3)*scale[0];
-        long down=SystemClock.uptimeMillis();
-        inject(down,MotionEvent.ACTION_DOWN,fromX,fromY);
-        for(int i=1;i<=8;i++){Thread.sleep(30);float t=i/8f;inject(down,MotionEvent.ACTION_MOVE,fromX+(toX-fromX)*t,fromY+(toY-fromY)*t);}
+        float probeX=size[0]/2f,probeY=size[1]/2f;
+        long probe=SystemClock.uptimeMillis();inject(probe,MotionEvent.ACTION_DOWN,probeX,probeY);
+        until("Array.isArray(window.lastPointer)");
+        JSONArray first=new JSONArray(eval("window.lastPointer"));
+        inject(probe,MotionEvent.ACTION_CANCEL,probeX,probeY);
+        eval("window.lastPointer=null;true");
+        probe=SystemClock.uptimeMillis();inject(probe,MotionEvent.ACTION_DOWN,probeX+40,probeY+40);
+        until("Array.isArray(window.lastPointer)");
+        JSONArray second=new JSONArray(eval("window.lastPointer"));
+        inject(probe,MotionEvent.ACTION_CANCEL,probeX+40,probeY+40);
+        float scaleX=40f/(float)(second.getDouble(0)-first.getDouble(0));
+        float scaleY=40f/(float)(second.getDouble(1)-first.getDouble(1));
+        float fromX=probeX+40+((float)points.getDouble(0)-(float)second.getDouble(0))*scaleX;
+        float fromY=probeY+40+((float)points.getDouble(1)-(float)second.getDouble(1))*scaleY;
+        float toX=probeX+40+((float)points.getDouble(2)-(float)second.getDouble(0))*scaleX;
+        float toY=probeY+40+((float)points.getDouble(3)-(float)second.getDouble(1))*scaleY;
+        long down=SystemClock.uptimeMillis();inject(down,MotionEvent.ACTION_DOWN,fromX,fromY);
+        until("drag && drag.from==='e2'");
+        for(int i=1;i<=8;i++){Thread.sleep(40);float t=i/8f;inject(down,MotionEvent.ACTION_MOVE,fromX+(toX-fromX)*t,fromY+(toY-fromY)*t);}
         inject(down,MotionEvent.ACTION_UP,toX,toY);
         until("game.history().length>=1");
         assertEquals("true",eval("game.history()[0]==='e4'"));

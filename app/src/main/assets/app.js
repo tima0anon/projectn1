@@ -255,7 +255,7 @@ $('board').addEventListener('pointermove',e=>{
  if(!drag||drag.id!==e.pointerId)return;
  const dx=e.clientX-drag.x,dy=e.clientY-drag.y;
  if(!drag.active&&Math.hypot(dx,dy)<7)return;
- if(!drag.active){drag.active=true;selected=drag.from;render();$('board').setPointerCapture(e.pointerId);drag.node.classList.add('dragging');}
+ if(!drag.active){drag.active=true;$('board').setPointerCapture(e.pointerId);selected=drag.from;render();drag.node.classList.add('dragging');}
  const c=coordinates(drag.from);drag.node.style.transform='translate(calc('+c.x*100+'% + '+dx+'px),calc('+c.y*100+'% + '+dy+'px))';
 });
 function endDrag(e,cancelled=false){

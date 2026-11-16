@@ -72,8 +72,8 @@ public class AppTest extends ActivityInstrumentationTestCase2<MainActivity> {
             scale[0]=getActivity().web.getScale();
             padding[0]=getActivity().web.getPaddingLeft();padding[1]=getActivity().web.getPaddingTop();
         });
-        float fromX=location[0]+padding[0]+(float)points.getDouble(0)*scale[0];
-        float fromY=location[1]+padding[1]+(float)points.getDouble(1)*scale[0];
+        float fromX=padding[0]+(float)points.getDouble(0)*scale[0];
+        float fromY=padding[1]+(float)points.getDouble(1)*scale[0];
         float toX=location[0]+padding[0]+(float)points.getDouble(2)*scale[0];
         float toY=location[1]+padding[1]+(float)points.getDouble(3)*scale[0];
         long down=SystemClock.uptimeMillis();
@@ -88,6 +88,6 @@ public class AppTest extends ActivityInstrumentationTestCase2<MainActivity> {
     private void inject(long down,int action,float x,float y){
         MotionEvent event=MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,x,y,0);
         event.setSource(InputDevice.SOURCE_TOUCHSCREEN);
-        getInstrumentation().sendPointerSync(event);event.recycle();
+        getInstrumentation().runOnMainSync(()->getActivity().web.dispatchTouchEvent(event));event.recycle();
     }
 }

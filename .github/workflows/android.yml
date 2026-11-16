@@ -36,6 +36,10 @@ jobs:
           npm test
       - name: Compile embedded Stockfish for ARM64 and x86_64
         run: bash scripts/build-engine.sh
+      - name: Restore stable development signing key
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/setup-signing.sh
       - name: Build APK and instrumentation tests
         run: |
           gradle wrapper
@@ -59,18 +63,20 @@ jobs:
       - name: Prepare installable APK and complete source
         run: |
           mkdir -p dist
-          cp app/build/outputs/apk/debug/app-debug.apk dist/OfflineChess-1.0.0.apk
+          cp app/build/outputs/apk/debug/app-debug.apk dist/OfflineChess-2.0.0.apk
           mkdir -p app/src/main/assets/licenses
           cp LICENSE app/src/main/assets/licenses/GPL-3.0.txt
           cp NOTICE.md app/src/main/assets/licenses/NOTICE.md
-          zip -q -r dist/OfflineChess-1.0.0-source.zip . -x '.git/*' '.gradle/*' 'node_modules/*' 'dist/*' 'app/build/*' 'local.properties'
+          zip -q -r dist/OfflineChess-2.0.0-source.zip . -x '.git/*' '.gradle/*' 'node_modules/*' 'dist/*' 'app/build/*' 'local.properties'
           cd dist
-          sha256sum OfflineChess-1.0.0.apk OfflineChess-1.0.0-source.zip > SHA256SUMS.txt
+          sha256sum OfflineChess-2.0.0.apk OfflineChess-2.0.0-source.zip > SHA256SUMS.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: android-test-reports
-          path: app/build/reports/androidTests/
+          path: |
+            app/build/reports/androidTests/
+            app/build/outputs/androidTest-results/
       - uses: actions/upload-artifact@v4
         with:
           name: OfflineChess-APK-and-source
@@ -79,5 +85,5 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          tag="v1.0.0-build-${GITHUB_RUN_NUMBER}"
-          gh release create "$tag" dist/* --target "$GITHUB_SHA" --title "Офлайн-шахматы 1.0.0" --notes "APK для Android 8+ (ARM64 и x86_64). Встроенный Stockfish 16.1. Выбор приблизительного Elo и цвета, отмена хода, автосохранение, архив и экспорт PGN. Сборка, подпись и тесты на эмуляторе Android 15 проверены автоматически. Полные исходники, NNUE и лицензии включены в архив."
+          tag="v2.0.0-build-${GITHUB_RUN_NUMBER}"
+          gh release create "$tag" dist/* --target "$GITHUB_SHA" --title "Офлайн-шахматы 2.0.0" --notes "APK для Android 8+ (ARM64 и x86_64). Встроенный Stockfish 16.1. Классические SVG-фигуры, анимация и перетаскивание, два столбца ходов, обучение с тренером и практика с оценкой каждого хода. Выбор Elo и цвета, отмена и сохранение партий. Версия 2 устанавливается отдельно от версии 1. Сборка, подпись и тесты на эмуляторе Android 15 проверены автоматически. Полные исходники, NNUE и лицензии включены в архив."

@@ -1,18 +1,25 @@
-<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' file:; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' file: data:">
 <title>Офлайн-шахматы</title><link rel="stylesheet" href="style.css"></head><body>
 <main>
-<header><div><small>ИГРА БЕЗ ИНТЕРНЕТА</small><h1>Офлайн-шахматы</h1></div><button class="icon" id="archive" aria-label="Сохранённые партии">☰</button></header>
-<div class="opponent"><span class="avatar">♞</span><div><b>Stockfish 16.1</b><div id="level" class="muted"></div></div><span class="badge">ОФЛАЙН</span></div>
+<header><div><small>STOCKFISH · БЕЗ ИНТЕРНЕТА</small><h1>Офлайн-шахматы</h1></div><button class="icon" id="archive" aria-label="Сохранённые партии">☰</button></header>
+<nav class="modes" aria-label="Режим игры"><button data-mode="game" class="active">Игра</button><button data-mode="learn">Обучение</button><button data-mode="practice">Практика</button></nav>
+<div class="opponent"><img src="pieces/bN.svg" alt="" class="avatar"><div><b>Stockfish 16.1</b><div id="level" class="muted"></div></div><div id="evalPill" class="evalPill" hidden></div></div>
+<div class="boardWrap">
 <div id="board" role="grid" aria-label="Шахматная доска"></div>
-<div class="status"><span id="status"></span><button id="retry" hidden>Повторить</button></div>
+<div id="pieces" aria-hidden="true"></div>
+<svg id="arrows" viewBox="0 0 800 800" aria-hidden="true"><defs><marker id="arrowhead" markerWidth="4" markerHeight="4" refX="3" refY="2" orient="auto"><path d="M0 0L4 2L0 4z" fill="#f6c25c"/></marker></defs><line id="hintArrow" stroke="#f6c25c" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead)" visibility="hidden"/></svg>
+<div id="moveBadge" hidden></div>
+</div>
+<div class="status"><span id="status" role="status" aria-live="polite"></span><button id="retry" hidden>Повторить</button></div>
 <div class="actions"><button id="undo">↶ Отменить</button><button id="save">Сохранить</button><button id="new" class="primary">Новая игра</button></div>
-<div id="history" class="moves"></div>
-<footer>Партия сохраняется автоматически</footer>
+<section id="coach" hidden aria-live="polite"><div class="coachTop"><b id="coachTitle">Тренер</b><span id="coachMark"></span></div><p id="coachText"></p><div id="coachScore" class="coachScore"></div><div class="coachActions"><button id="hint" hidden>Лучший ход</button><button id="tryAgain" hidden>Переиграть</button><button id="continue" class="primary" hidden>Продолжить</button></div><small>Оценка Stockfish при ограниченном времени анализа</small></section>
+<section class="moveSection"><div class="sectionTitle">Ходы партии <span id="modeInfo"></span></div><div id="history" class="moves"><table><thead><tr><th>№</th><th>Белые</th><th>Чёрные</th></tr></thead><tbody id="moveRows"></tbody></table><p id="emptyMoves">Нажмите на фигуру и клетку или перетащите фигуру</p></div></section>
+<footer>Автосохранение включено · <button id="legend">Обозначения</button></footer>
 </main>
-<dialog id="setup"><form method="dialog"><h2>Новая партия</h2><label>Сила соперника <b id="ratingText">≈ 1200 Elo</b></label><input id="rating" type="range" min="400" max="3000" step="100" value="1200"><div class="scale"><span>Новичок</span><span>Мастер</span></div><p class="hint">Рейтинг ориентировочный. Ниже 1320 Elo движок дополнительно допускает ошибки.</p><label for="color">Ваш цвет</label><select id="color"><option value="w">Белые</option><option value="b">Чёрные</option><option value="random">Случайный</option></select><div class="dialogActions"><button value="cancel">Назад</button><button id="start" type="button" class="primary">Начать</button></div></form></dialog>
+<dialog id="setup"><form method="dialog"><h2>Новая партия</h2><label for="newMode">Режим</label><select id="newMode"><option value="game">Игра — без оценки ходов</option><option value="learn">Обучение — тренер после хода</option><option value="practice">Практика — пометки на каждом ходе</option></select><label>Сила соперника <b id="ratingText">≈ 1200 Elo</b></label><input id="rating" type="range" min="400" max="3000" step="100" value="1200"><div class="scale"><span>Новичок</span><span>Мастер</span></div><p class="hint">Сила приблизительная. Тренер анализирует на полной силе независимо от уровня соперника.</p><label for="color">Ваш цвет</label><select id="color"><option value="w">Белые</option><option value="b">Чёрные</option><option value="random">Случайный</option></select><div class="dialogActions"><button value="cancel">Назад</button><button id="start" type="button" class="primary">Начать</button></div></form></dialog>
 <dialog id="promotion"><h2>Превращение пешки</h2><div id="promotionChoices" class="dialogActions"></div></dialog>
 <dialog id="saved"><h2>Сохранённые партии</h2><div id="savedList"></div><div class="dialogActions"><button id="export">Экспорт текущей PGN</button><button onclick="document.getElementById('saved').close()">Закрыть</button></div></dialog>
+<dialog id="legendDialog"><h2>Оценки ходов</h2><div id="legendList"></div><p class="hint">Пометка сравнивает ваш ход с лучшим вариантом Stockfish и учитывает изменение оценки позиции. Это собственная шкала приложения. Плюс в оценке — преимущество белых, минус — чёрных.</p><button onclick="document.getElementById('legendDialog').close()">Понятно</button></dialog>
 <div id="toast" role="status"></div>
-<script src="chess.js"></script><script src="app.js"></script>
-</body></html>
+<script src="chess.js"></script><script src="app.js"></script></body></html>

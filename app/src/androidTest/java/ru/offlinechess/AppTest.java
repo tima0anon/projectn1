@@ -1,6 +1,10 @@
 package ru.offlinechess;
 import android.test.ActivityInstrumentationTestCase2;
 import java.util.concurrent.*;
+import android.os.SystemClock;
+import android.view.MotionEvent;
+import android.view.InputDevice;
+import org.json.JSONArray;
 public class AppTest extends ActivityInstrumentationTestCase2<MainActivity> {
     public AppTest(){super(MainActivity.class);}
     private String eval(String code)throws Exception{
@@ -55,5 +59,35 @@ public class AppTest extends ActivityInstrumentationTestCase2<MainActivity> {
         assertEquals("true",eval("mode===\'practice\'"));
         assertEquals("4",eval("reviews.filter(Boolean).length"));
         eval("restore({moves:[],human:'w',elo:1200});true");
+    }
+
+    public void testTouchDragMoves()throws Exception{
+        getActivity();until("typeof restore==='function'");
+        eval("document.getElementById('setup').close();restore({moves:[],human:'w',elo:1500,mode:'game'});true");
+        until("document.querySelector('#pieces [data-square=e2]').complete");
+        JSONArray points=new JSONArray(eval("(()=>{const r=document.getElementById('board').getBoundingClientRect();return [r.left+r.width*4.5/8,r.top+r.height*6.5/8,r.left+r.width*4.5/8,r.top+r.height*4.5/8]})()"));
+        int[] location=new int[2];float[] scale=new float[1];int[] padding=new int[2];
+        getInstrumentation().runOnMainSync(()->{
+            getActivity().web.getLocationOnScreen(location);
+            scale[0]=getActivity().web.getScale();
+            padding[0]=getActivity().web.getPaddingLeft();padding[1]=getActivity().web.getPaddingTop();
+        });
+        float fromX=location[0]+padding[0]+(float)points.getDouble(0)*scale[0];
+        float fromY=location[1]+padding[1]+(float)points.getDouble(1)*scale[0];
+        float toX=location[0]+padding[0]+(float)points.getDouble(2)*scale[0];
+        float toY=location[1]+padding[1]+(float)points.getDouble(3)*scale[0];
+        long down=SystemClock.uptimeMillis();
+        inject(down,MotionEvent.ACTION_DOWN,fromX,fromY);
+        for(int i=1;i<=8;i++){Thread.sleep(30);float t=i/8f;inject(down,MotionEvent.ACTION_MOVE,fromX+(toX-fromX)*t,fromY+(toY-fromY)*t);}
+        inject(down,MotionEvent.ACTION_UP,toX,toY);
+        until("game.history().length>=1");
+        assertEquals("true",eval("game.history()[0]==='e4'"));
+        until("game.history().length===2 && !busy");
+        eval("restore({moves:[],human:'w',elo:1200});true");
+    }
+    private void inject(long down,int action,float x,float y){
+        MotionEvent event=MotionEvent.obtain(down,SystemClock.uptimeMillis(),action,x,y,0);
+        event.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        getInstrumentation().sendPointerSync(event);event.recycle();
     }
 }

@@ -20,7 +20,7 @@ assert.equal(e('game.history().length'),0);
 e('onEngine('+old+',"e7e5",null)');
 assert.equal(e('game.history().length'),0,'cancelled engine response must be ignored');
 e("play({from:'e2',to:'e4'})");
-e('onEngine('+searches.at(-1)[0]+',"e7e5",null)");
+e('onEngine('+searches.at(-1)[0]+',"e7e5",null)');
 assert.equal(e('game.history().length'),2);
 e('undo()');assert.equal(e('game.history().length'),0,'undo rolls back both plies');
 e("restore({moves:['e4','e5','Nf3'],human:'w',elo:1600})");

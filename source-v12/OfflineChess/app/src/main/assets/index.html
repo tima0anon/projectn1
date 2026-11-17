@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover"><meta name="theme-color" content="#151918"><title>Офлайн-шахматы</title><link rel="stylesheet" href="style.css"></head>
+<body>
+<div class="app">
+<header class="topbar"><div class="brand"><div class="brand-logo">♞</div><div><strong>ОФЛАЙН ШАХМАТЫ</strong><small>Тренируйся в своём ритме</small></div></div><div class="header-actions"><span id="engine-status" class="status-pill">● Офлайн</span><button id="open-new" class="icon-btn" aria-label="Новая партия">＋</button></div></header>
+<main>
+<section id="screen-game" class="screen active">
+<div class="mode-tabs" role="tablist"><button class="mode-tab selected" data-mode="play">♟ Игра</button><button class="mode-tab" data-mode="practice">✧ Практика</button><button class="mode-tab" data-mode="coach">◈ Тренер</button></div>
+<div class="game-area">
+ <div class="player-band"><div class="avatar rival">♚</div><div class="player-info"><b>Компьютер <span id="opponent-elo">1200</span></b><small id="opponent-label">Локальный движок</small></div><div class="turn-indicator" id="opponent-turn">Ходит</div></div>
+ <div id="opening-live" class="opening-live">Дебютная база доступна офлайн</div><div class="board-shell"><div id="board" class="chessboard" aria-label="Шахматная доска"><div id="arrow-layer"></div></div><div id="fly-layer"></div></div>
+ <div class="player-band"><div class="avatar self">♟</div><div class="player-info"><b>Вы <span id="your-color">Белые</span></b><small id="game-status">Ваш ход</small></div><div class="turn-indicator" id="you-turn">Ходит</div></div>
+ <div id="evaluation" class="evaluation"><div class="eval-track"><div id="eval-fill" class="eval-fill"></div></div><span id="eval-text">0.0</span><span id="eval-caption">Приблизительная оценка</span></div>
+ <div id="coach-card" class="coach-card"><div class="coach-icon">✦</div><div class="coach-content"><strong id="coach-title">Подсказки тренера</strong><p id="coach-message">Сделайте ход, чтобы получить анализ.</p></div></div>
+ <div class="action-row"><button id="undo" class="action-btn"><span>↶</span> Отмена</button><button id="hint" class="action-btn"><span>✧</span> Подсказка</button><button id="flip" class="action-btn"><span>⇅</span> Перевернуть</button><button id="save" class="action-btn accent"><span>▣</span> Сохранить</button></div>
+</div>
+<div class="move-panel"><div class="section-heading"><b>История ходов</b><span id="move-count">0 ходов</span></div><div class="move-cols"><span>№</span><span>Белые</span><span>Чёрные</span></div><div id="move-history" class="history-list"><div class="empty-history">Ходы появятся здесь</div></div><div id="replay-controls" hidden><button id="return-live" class="outline-btn">↩ Вернуться к партии</button></div><button id="open-review" class="primary-btn review-entry-btn">▤ Разбор партии и отчёт</button><button id="copy-pgn" class="text-btn">Скопировать PGN ↗</button></div>
+</section>
+<section id="screen-review" class="screen">
+ <div class="page-title">Разбор партии</div><p class="page-subtitle">Точность, ошибки, лучшие продолжения и график оценки.</p>
+ <div id="review-controls" class="review-controls">
+  <span>Глубина анализа</span><div class="pill-options review-quality"><button id="review-fast" class="selected">Быстрый</button><button id="review-deep">Точный</button></div>
+  <button id="review-start" class="primary-btn">Анализировать партию</button>
+ </div>
+ <div id="review-progress" class="review-progress" hidden><div id="review-progress-title">Анализ позиций…</div><div class="progress-track"><div id="review-progress-fill"></div></div><small id="review-progress-caption">0%</small><button id="review-cancel" class="text-btn">Остановить</button></div>
+ <div id="review-empty" class="review-empty">Сыграйте хотя бы один ход, чтобы открыть разбор партии.</div>
+ <div id="review-report" hidden>
+  <div class="review-note" id="review-source-note"></div>
+  <div id="review-accuracy" class="review-accuracy"></div><div id="review-rating" class="review-rating"></div><div id="review-opening" class="review-opening"></div><button id="retry-start" class="primary-btn retry-entry">↻ Исправить свои ошибки</button>
+  <div class="report-heading">Сводка ходов</div><div id="review-stats" class="review-stats"></div>
+  <div class="report-heading">График оценки позиции <small>плюс — преимущество белых</small></div>
+  <div id="review-chart" class="review-chart"></div>
+  <div class="report-heading">Просмотр ходов</div>
+  <div class="review-analysis-area">
+   <div class="review-view"><div id="review-board" class="chessboard review-board"></div><div class="review-navigation"><button id="review-prev">← Назад</button><span id="review-ply-label">Начало</span><button id="review-next">Вперёд →</button></div><button id="review-best" class="outline-btn">Показать лучший ход на доске</button></div>
+   <div class="review-details"><strong id="review-move-title">Выберите ход</strong><p id="review-comment"></p><div id="review-variations"></div></div>
+  </div>
+  <div class="move-cols review-move-heading"><span>№</span><span>Белые</span><span>Чёрные</span></div><div id="review-history" class="history-list review-history"></div>
+  <button id="review-export" class="outline-btn report-export">Скопировать текст отчёта</button>
+ </div>
+</section>
+<section id="screen-openings" class="screen"><div class="page-title">Дебютная база</div><p class="page-subtitle">Локальный справочник дебютов и вариантов.</p><div class="opening-search-wrap"><input id="opening-search" type="search" placeholder="Название или ECO-код" autocomplete="off"><span id="opening-count"></span></div><div id="opening-current" class="current-opening"></div><div id="opening-preview" class="opening-preview" hidden><strong id="opening-preview-title"></strong><div id="opening-preview-board" class="chessboard opening-preview-board"></div><div class="review-navigation"><button id="opening-prev">← Назад</button><span id="opening-ply"></span><button id="opening-next">Вперёд →</button></div><div id="opening-preview-moves" class="opening-preview-moves"></div></div><div id="opening-list" class="opening-list"></div></section><section id="screen-saves" class="screen"><div class="page-title">Сохранённые партии</div><p class="page-subtitle">Партии хранятся только на этом устройстве.</p><div id="saved-games" class="saved-list"></div><button id="new-from-saves" class="primary-btn">＋ Новая партия</button></section>
+<section id="screen-info" class="screen"><div class="page-title">Настройки</div><div class="settings-card"><h3>Шахматный тренажёр</h3><p>Без интернета, регистрации и рекламы.</p><p>Фигуры двигаются касанием клеток. В режиме практики каждый ход получает оценку, а тренер объясняет ошибки.</p><p id="engine-description">Движок: локальный.</p></div><button id="reset-games" class="outline-btn danger">Удалить сохранённые партии</button></section>
+</main>
+<nav class="bottom-nav"><button class="nav-item active" data-screen="game"><span>♜</span><small>Играть</small></button><button class="nav-item" data-screen="review"><span>▤</span><small>Разбор</small></button><button class="nav-item" data-screen="saves"><span>▤</span><small>Партии</small></button><button class="nav-item" data-screen="openings"><span>♙</span><small>Дебюты</small></button><button class="nav-item" data-screen="info"><span>⚙</span><small>Настройки</small></button></nav>
+</div>
+<div class="modal-backdrop" id="new-modal" hidden><section class="dialog"><div class="dialog-top"><h2>Новая партия</h2><button id="close-modal" class="close-btn">✕</button></div><div class="form-label">Режим</div><div class="pill-options" id="setup-modes"><button data-setup-mode="play" class="selected">Игра</button><button data-setup-mode="practice">Практика</button><button data-setup-mode="coach">Тренер</button></div><div class="form-label">Ваш цвет</div><div class="pill-options" id="setup-color"><button data-color="w" class="selected">♔ Белые</button><button data-color="b">♚ Чёрные</button><button data-color="random">◐ Случайно</button></div><div class="elo-label"><span>Сила соперника</span><strong id="elo-display">1200 Elo</strong></div><input type="range" id="elo-range" min="400" max="2800" step="100" value="1200"><div class="range-ends"><span>400 · Новичок</span><span>2800 · Мастер</span></div><div class="setup-notice">Рейтинг приблизительный. Точность зависит от установленного движка.</div><button id="start-game" class="primary-btn">Начать партию</button></section></div>
+<div class="modal-backdrop" id="promotion-modal" hidden><section class="promotion-dialog"><h3>Превращение пешки</h3><div id="promotion-choices" class="promotion-choices"></div></section></div>
+<div class="modal-backdrop" id="result-modal" hidden><section class="result-dialog"><div class="result-symbol">♔</div><h2 id="result-title">Партия завершена</h2><p id="result-reason"></p><button id="result-review" class="primary-btn">Разобрать партию</button><button id="result-new" class="outline-btn">Новая партия</button><button id="result-close" class="text-btn">Посмотреть доску</button></section></div>
+<div id="retry-modal" class="modal-backdrop" hidden><section class="retry-dialog"><div class="dialog-top"><h2>Работа над ошибками</h2><button id="retry-close" class="close-btn">✕</button></div><div class="retry-head"><span id="retry-counter"></span><strong id="retry-move"></strong></div><div id="retry-board" class="chessboard retry-board"></div><p id="retry-feedback" class="retry-feedback"></p><div class="retry-actions"><button id="retry-solution" class="outline-btn">Показать лучший ход</button><button id="retry-next" class="primary-btn">Следующая ошибка →</button></div></section></div><div id="toast" class="toast" role="status"></div>
+<script src="chess-core.js"></script><script src="insights-core.js"></script><script src="review-core.js"></script><script src="app.js"></script><script src="review-ui.js"></script><script src="openings-ui.js"></script><script src="retry-ui.js"></script>
+</body></html>

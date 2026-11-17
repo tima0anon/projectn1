@@ -1,0 +1,114 @@
+name: Build attached OfflineChess v1.2
+on:
+  push:
+    branches: [build-v12-source]
+    paths: [OfflineChess-v1.2-complete-source.zip]
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: build-v12-source
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: android-actions/setup-android@v3
+        with:
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+      - name: Extract supplied source and locate Android project
+        shell: python
+        run: |
+          import os, pathlib, zipfile, stat
+          root=pathlib.Path('source-v12').resolve()
+          root.mkdir(exist_ok=True)
+          with zipfile.ZipFile('OfflineChess-v1.2-complete-source.zip') as archive:
+              if sum(i.file_size for i in archive.infolist()) > 800_000_000:
+                  raise RuntimeError('Archive exceeds extraction limit')
+              for info in archive.infolist():
+                  path=root/info.filename
+                  if not path.resolve().is_relative_to(root):
+                      raise RuntimeError('Invalid archive path')
+                  if stat.S_ISLNK(info.external_attr >> 16):
+                      raise RuntimeError('Archive symlinks are unsupported')
+              archive.extractall(root)
+          candidates=[p.parent for p in root.rglob('settings.gradle')]
+          candidates += [p.parent for p in root.rglob('settings.gradle.kts')]
+          candidates=[p for p in candidates if (p/'app').is_dir()]
+          if len(candidates)!=1:
+              raise RuntimeError('Expected one Android app project: '+str(candidates))
+          project=candidates[0]
+          with open(os.environ['GITHUB_ENV'],'a') as out:
+              out.write('IMPORTED_PROJECT='+str(project)+'\n')
+          print('Android project:',project)
+          for path in sorted(project.rglob('*')):
+              if path.is_file():
+                  print(path.relative_to(project),path.stat().st_size)
+      - name: Preserve extracted text sources for review
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import pathlib,subprocess
+          allowed={'.java','.kt','.kts','.gradle','.js','.cjs','.mjs','.ts','.json','.xml','.html','.css','.md','.txt','.sh','.py','.properties','.svg'}
+          for p in pathlib.Path('source-v12').rglob('*'):
+              if p.is_file() and p.suffix in allowed and '.git' not in p.parts and p.stat().st_size<5_000_000:
+                  subprocess.run(['git','add','--',str(p)],check=True)
+          PY
+          git config user.name "OfflineChess build"
+          git config user.email "offlinechess-build@users.noreply.github.com"
+          if ! git diff --cached --quiet; then
+            git commit -m "Import supplied OfflineChess v1.2 sources"
+            git push origin HEAD:build-v12-source
+          fi
+      - name: Install Android build dependencies
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0" "ndk;27.2.12479018"
+      - name: Check supplied tests
+        run: |
+          cd "$IMPORTED_PROJECT"
+          if [ -f package.json ]; then npm install --ignore-scripts; fi
+          for test in tests/rules.test.js tests/review.test.js tests/ui-smoke.test.js; do
+            if [ -f "$test" ]; then node "$test"; fi
+          done
+      - name: Build embedded Stockfish
+        env:
+          ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
+          ANDROID_NDK_ROOT: /usr/local/lib/android/sdk/ndk/27.2.12479018
+          NDK_ROOT: /usr/local/lib/android/sdk/ndk/27.2.12479018
+        run: |
+          cd "$IMPORTED_PROJECT"
+          export PATH="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
+          bash scripts/build-stockfish.sh
+          test -s app/src/main/jniLibs/arm64-v8a/libstockfish.so
+          llvm-readelf -h app/src/main/jniLibs/arm64-v8a/libstockfish.so
+      - name: Build APK and verify signature
+        run: |
+          cd "$IMPORTED_PROJECT"
+          gradle wrapper
+          gradle assembleDebug --stacktrace
+          "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
+          if "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions app/build/outputs/apk/debug/app-debug.apk | grep -q android.permission.INTERNET; then exit 1; fi
+      - name: Package APK and complete source
+        run: |
+          mkdir -p dist
+          cp "$IMPORTED_PROJECT/app/build/outputs/apk/debug/app-debug.apk" dist/OfflineChess-v1.2.apk
+          (cd "$IMPORTED_PROJECT" && zip -q -r "$GITHUB_WORKSPACE/dist/OfflineChess-v1.2-source.zip" . -x '.git/*' '.gradle/*' 'node_modules/*' 'app/build/*' 'local.properties')
+          (cd dist && sha256sum *.apk *.zip > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OfflineChess-v1.2-APK
+          path: dist/
+      - name: Publish built files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "v1.2-import-build-${GITHUB_RUN_NUMBER}" dist/* --target "$GITHUB_SHA" --title "Офлайн-шахматы — архив v1.2" --notes "Собрано из пользовательского архива OfflineChess-v1.2-complete-source.zip. Подробности пройденных проверок см. в журнале GitHub Actions."

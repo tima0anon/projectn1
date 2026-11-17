@@ -12,6 +12,8 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.util.Log;
+import android.widget.FrameLayout;
+import android.view.WindowInsets;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -40,13 +42,24 @@ public class MainActivity extends Activity {
     public void onCreate(Bundle saved) {
         super.onCreate(saved);
         web = new WebView(this);
-        setContentView(web);
+        FrameLayout root = new FrameLayout(this);
+        root.setBackgroundColor(0xff151918);
+        root.addView(web, new FrameLayout.LayoutParams(-1,-1));
+        if (android.os.Build.VERSION.SDK_INT >= 30) root.setOnApplyWindowInsetsListener((view,insets) -> {
+            android.graphics.Insets bars=insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+            view.setPadding(bars.left,bars.top,bars.right,bars.bottom);return insets;
+        });
+        else root.setOnApplyWindowInsetsListener((view,insets) -> {
+            view.setPadding(insets.getSystemWindowInsetLeft(),insets.getSystemWindowInsetTop(),insets.getSystemWindowInsetRight(),insets.getSystemWindowInsetBottom());return insets;
+        });
+        setContentView(root);
         web.setBackgroundColor(0xff151918);
         WebSettings settings = web.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
         settings.setAllowFileAccess(true);
         settings.setAllowContentAccess(false);
+        settings.setBlockNetworkLoads(true);
         settings.setAllowFileAccessFromFileURLs(false);
         settings.setAllowUniversalAccessFromFileURLs(false);
         web.setWebViewClient(new WebViewClient());

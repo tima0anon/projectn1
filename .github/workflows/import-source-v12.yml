@@ -89,9 +89,15 @@ jobs:
         run: |
           cd "$IMPORTED_PROJECT"
           if [ -f package.json ]; then npm install --ignore-scripts; fi
-          for test in tests/rules.test.js tests/review.test.js tests/ui-smoke.test.js; do
+          for test in tests/rules.test.js tests/review.test.js tests/insights.test.js tests/ui-smoke.test.js; do
             if [ -f "$test" ]; then node "$test"; fi
           done
+      - name: Test mobile browser interface
+        run: |
+          python3 -m pip install --quiet playwright==1.56.0
+          python3 -m playwright install --with-deps chromium
+          cd "$IMPORTED_PROJECT"
+          python3 tests/browser_smoke.py
       - name: Build embedded Stockfish
         env:
           ANDROID_NDK_HOME: /usr/local/lib/android/sdk/ndk/27.2.12479018
@@ -103,19 +109,49 @@ jobs:
           bash scripts/build-stockfish.sh
           test -s app/src/main/jniLibs/arm64-v8a/libstockfish.so
           llvm-readelf -h app/src/main/jniLibs/arm64-v8a/libstockfish.so
+      - name: Restore development signing key
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd "$IMPORTED_PROJECT"
+          bash "$GITHUB_WORKSPACE/scripts/setup-signing.sh"
       - name: Build APK and verify signature
         run: |
           cd "$IMPORTED_PROJECT"
           gradle wrapper
-          gradle assembleDebug --stacktrace
+          gradle assembleDebug assembleDebugAndroidTest --stacktrace
           "$ANDROID_HOME/build-tools/35.0.0/apksigner" verify --verbose app/build/outputs/apk/debug/app-debug.apk
           if "$ANDROID_HOME/build-tools/35.0.0/aapt" dump permissions app/build/outputs/apk/debug/app-debug.apk | grep -q android.permission.INTERNET; then exit 1; fi
+      - name: Enable KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Test Android app and Stockfish offline
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          arch: x86_64
+          target: google_apis
+          profile: pixel_6
+          disable-animations: true
+          script: |
+            adb shell svc wifi disable
+            adb shell svc data disable
+            cd "$IMPORTED_PROJECT" && gradle connectedDebugAndroidTest --stacktrace
       - name: Package APK and complete source
         run: |
           mkdir -p dist
           cp "$IMPORTED_PROJECT/app/build/outputs/apk/debug/app-debug.apk" dist/OfflineChess-v1.2.apk
-          (cd "$IMPORTED_PROJECT" && zip -q -r "$GITHUB_WORKSPACE/dist/OfflineChess-v1.2-source.zip" . -x '.git/*' '.gradle/*' 'node_modules/*' 'app/build/*' 'local.properties')
+          (cd "$IMPORTED_PROJECT" && zip -q -r "$GITHUB_WORKSPACE/dist/OfflineChess-v1.2-source.zip" . -x '.git/*' '.gradle/*' 'node_modules/*' 'app/build/*' 'local.properties' '*/.git/*')
           (cd dist && sha256sum *.apk *.zip > SHA256SUMS.txt)
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: source-v12-test-reports
+          path: |
+            source-v12/OfflineChess/app/build/reports/androidTests/
+            source-v12/OfflineChess/app/build/outputs/androidTest-results/
       - uses: actions/upload-artifact@v4
         with:
           name: OfflineChess-v1.2-APK
@@ -123,4 +159,4 @@ jobs:
       - name: Publish built files
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "v1.2-import-build-${GITHUB_RUN_NUMBER}" dist/* --target "$GITHUB_SHA" --title "Офлайн-шахматы — архив v1.2" --notes "Собрано из пользовательского архива OfflineChess-v1.2-complete-source.zip. Подробности пройденных проверок см. в журнале GitHub Actions."
+        run: gh release create "v1.2-import-build-${GITHUB_RUN_NUMBER}" dist/* --target "$GITHUB_SHA" --title "Офлайн-шахматы — архив v1.2" --notes "Собрано из пользовательского архива OfflineChess-v1.2-complete-source.zip. Встроен официальный Stockfish ARM64/x86_64. Пройдены четыре JS-теста, проверка мобильного интерфейса Chromium, проверка подписи и Android 15: ходы движка, MultiPV=3, отчёт, восстановление и отмена анализа с отключённой сетью."

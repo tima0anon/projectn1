@@ -2,7 +2,7 @@ name: Build attached OfflineChess v1.2
 on:
   push:
     branches: [build-v12-source]
-    paths: [OfflineChess-v1.2-complete-source.zip]
+    paths: [OfflineChess-v1.2-complete-source.zip, .github/workflows/import-source-v12.yml, 'source-v12/**']
 permissions:
   contents: write
 jobs:
@@ -13,6 +13,15 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: build-v12-source
+      - name: Download user-shared source archive
+        run: |
+          python3 -m pip install --quiet gdown==5.2.0
+          python3 - <<'PY'
+          import gdown,zipfile
+          output=gdown.download(id='1ZESL-KET4jasNJDDNibP1tJ_YyDqm0Cs',output='OfflineChess-v1.2-complete-source.zip',quiet=False)
+          if not output or not zipfile.is_zipfile(output):
+              raise RuntimeError('The shared Google Drive file is not a downloadable ZIP archive.')
+          PY
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -55,6 +64,9 @@ jobs:
           for path in sorted(project.rglob('*')):
               if path.is_file():
                   print(path.relative_to(project),path.stat().st_size)
+      - name: Reapply tracked source fixes after extraction
+        run: |
+          if [ -n "$(git ls-files source-v12)" ]; then git restore --worktree -- source-v12; fi
       - name: Preserve extracted text sources for review
         shell: bash
         run: |

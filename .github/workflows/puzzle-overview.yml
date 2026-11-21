@@ -1,0 +1,44 @@
+name: Build Puzzle Overview APK
+on:
+  push:
+    branches: [puzzle-overview-android]
+  workflow_dispatch:
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack Android project
+        run: |
+          mkdir -p puzzle-overview
+          base64 -d puzzle_overview_bundle.b64 > /tmp/puzzle-src.zip
+          unzip -q /tmp/puzzle-src.zip -d puzzle-overview
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Android platform
+        run: sdkmanager "platforms;android-35" "build-tools;35.0.0"
+      - name: Stockfish Android ARM64
+        run: |
+          mkdir -p /tmp/stockfish puzzle-overview/app/src/main/jniLibs/arm64-v8a
+          curl -fL --retry 3 "https://github.com/official-stockfish/Stockfish/releases/download/sf_18/stockfish-android-armv8.tar" -o /tmp/stockfish.tar
+          tar -xf /tmp/stockfish.tar -C /tmp/stockfish
+          SF=$(find /tmp/stockfish -type f -name 'stockfish-android-armv8' | head -n 1)
+          test -n "$SF"
+          echo "cc3b3b74466b6d85cdc0f8cfdad4111c6a44bd0698f4eab96fea7b359a54d3d4  $SF" | sha256sum -c -
+          cp "$SF" puzzle-overview/app/src/main/jniLibs/arm64-v8a/libstockfish.so
+          chmod 755 puzzle-overview/app/src/main/jniLibs/arm64-v8a/libstockfish.so
+      - name: Assemble APK
+        run: gradle -p puzzle-overview --no-daemon assembleDebug
+      - name: Upload installable APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: PuzzleOverview-APK
+          path: puzzle-overview/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 14
